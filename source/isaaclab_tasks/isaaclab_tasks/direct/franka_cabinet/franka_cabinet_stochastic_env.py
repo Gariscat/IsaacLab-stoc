@@ -22,9 +22,15 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import sample_uniform
 
+## from isaacsim.core.utils.xform_utils import *
+from pxr import Gf, UsdGeom
+import random
+import math
+random.seed(0)
+
 
 @configclass
-class FrankaCabinetEnvCfg(DirectRLEnvCfg):
+class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 8.3333  # 500 timesteps
     decimation = 2
@@ -46,7 +52,10 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=3.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(
+        num_envs=4096, env_spacing=4.0, replicate_physics=True,
+        random_rotation_z=True, random_rotation_z_range=(-0.0, 0.0)
+    )
 
     # robot
     robot = ArticulationCfg(
@@ -102,6 +111,8 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     )
 
     # cabinet
+    ## rot_z = random.uniform(-math.pi / 4, math.pi / 4)  # random rotation around z-axis for (-45, 45) degrees
+    ## print("rot_z:", rot_z)
     cabinet = ArticulationCfg(
         prim_path="/World/envs/env_.*/Cabinet",
         spawn=sim_utils.UsdFileCfg(
@@ -110,7 +121,8 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
         ),
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(0.0, 0, 0.4),
-            rot=(0.1, 0.0, 0.0, 0.0),
+            rot=(1.0, 0.0, 0.0, 0.0),
+            ## rot = (math.cos(rot_z/2), 0.0, 0.0, math.sin(rot_z/2)),
             joint_pos={
                 "door_left_joint": 0.0,
                 "door_right_joint": 0.0,
@@ -161,7 +173,7 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     finger_reward_scale = 2.0
 
 
-class FrankaCabinetEnv(DirectRLEnv):
+class FrankaCabinetStochasticEnv(DirectRLEnv):
     # pre-physics step calls
     #   |-- _pre_physics_step(action)
     #   |-- _apply_action()
@@ -171,9 +183,9 @@ class FrankaCabinetEnv(DirectRLEnv):
     #   |-- _reset_idx(env_ids)
     #   |-- _get_observations()
 
-    cfg: FrankaCabinetEnvCfg
+    cfg: FrankaCabinetStochasticEnvCfg
 
-    def __init__(self, cfg: FrankaCabinetEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: FrankaCabinetStochasticEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
 
         def get_env_local_pose(env_pos: torch.Tensor, xformable: UsdGeom.Xformable, device: torch.device):
@@ -276,6 +288,28 @@ class FrankaCabinetEnv(DirectRLEnv):
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
+        
+        if self.scene.cfg.random_rotation_z:
+            for env_id, env_prim_path in enumerate(self.scene.env_prim_paths):
+                if env_id == 0:  # 0 is the source environment, which if modified, would impact all the cloned environments
+                    continue
+                rand_z_rot = random.uniform(*self.scene.cfg.random_rotation_z_range)
+                
+                env_prim = self.scene.stage.GetPrimAtPath(env_prim_path+"/Cabinet")
+                
+                ## print("env_prim:", env_prim_path)
+                ## print("env_prim type:", type(env_prim))
+                UsdGeom.Xformable(env_prim).AddRotateXYZOp()
+                """print("Xformable dir:", dir(xform))
+                xform.SetRotate(Gf.Rotation(Gf.Vec3d(0, 0, 1), random.uniform(-math.pi / 4, math.pi / 4)))"""
+                """reset_and_set_xform_ops(
+                    prim=xform,
+                    translation=Gf.Vec3d(0, 0, 0),
+                    rotation=Gf.Rotation(Gf.Vec3d(0, 0, 1), random.uniform(-math.pi / 4, math.pi / 4)).GetQuat(),
+                )"""
+                ## print(type(xform))
+                # https://docs.isaacsim.omniverse.nvidia.com/latest/replicator_tutorials/tutorial_replicator_isaac_randomizers.html#sequential-randomizations
+                env_prim.GetAttribute("xformOp:rotateXYZ").Set(Gf.Vec3d(0, 0, rand_z_rot))
 
     # pre-physics step calls
 

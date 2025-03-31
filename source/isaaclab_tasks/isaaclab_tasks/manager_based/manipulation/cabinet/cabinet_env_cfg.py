@@ -37,7 +37,7 @@ FRAME_MARKER_SMALL_CFG.markers["frame"].scale = (0.10, 0.10, 0.10)
 ##
 # Scene definition
 ##
-
+ARTICULATED_ASSET_BASE_DIR = "/g0433_data/tianshihan/bind/models/object/articulated"
 
 @configclass
 class CabinetSceneCfg(InteractiveSceneCfg):
@@ -56,6 +56,8 @@ class CabinetSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Cabinet",
         spawn=sim_utils.UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Sektion_Cabinet/sektion_cabinet_instanceable.usd",
+            # usd_path = "/ssd/lixinyu/usd_files/sektion_cabinet_instanceable.usd",
+            ## usd_path=f"{ARTICULATED_ASSET_BASE_DIR}/shoecabinet/cdd537b7c30ef1e200f80aaec0534891/instance_dynamic.usd",
             activate_contact_sensors=False,
         ),
         init_state=ArticulationCfg.InitialStateCfg(

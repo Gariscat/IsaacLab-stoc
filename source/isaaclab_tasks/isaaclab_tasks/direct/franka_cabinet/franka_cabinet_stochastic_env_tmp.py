@@ -22,9 +22,26 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import sample_uniform
 
+SHOE_CABINET_DIR = "/ssd/lixinyu/articulated/shoecabinet"
+CABINET_PATH = "cdd537b7c30ef1e200f80aaec0534891/instance_dynamic_instanceable.usd"
+
+DIRECTION2ID = {
+    "buttom-right": 480,
+    "mid-right": 440,
+    "top-right": 400,
+    "bottom-left": 360,
+    "mid-left": 320,
+    "top-left": 280,
+}
+
+import random
+import time
+
+# Set the seed to a high-resolution timestamp
+random.seed(int(time.perf_counter() * 1000000))
 
 @configclass
-class FrankaCabinetEnvCfg(DirectRLEnvCfg):
+class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 8.3333  # 500 timesteps
     decimation = 2
@@ -46,7 +63,7 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=3.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=64.0, replicate_physics=True)
 
     # robot
     robot = ArticulationCfg(
@@ -101,37 +118,34 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
         },
     )
 
+    target_direction = random.choice(list(DIRECTION2ID.keys()))
     # cabinet
     cabinet = ArticulationCfg(
         prim_path="/World/envs/env_.*/Cabinet",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Sektion_Cabinet/sektion_cabinet_instanceable.usd",
+            ### usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Sektion_Cabinet/sektion_cabinet_instanceable.usd",
+            usd_path=f"{SHOE_CABINET_DIR}/{CABINET_PATH}",
             activate_contact_sensors=False,
         ),
         init_state=ArticulationCfg.InitialStateCfg(
-            pos=(0.0, 0, 0.4),
-            rot=(0.1, 0.0, 0.0, 0.0),
+            pos=(0.0, 0, 50.0),
+            rot=(0.0, 0.0, 0.0, 1.0),  # 180 degree around the z-axis
             joint_pos={
-                "door_left_joint": 0.0,
-                "door_right_joint": 0.0,
-                "drawer_bottom_joint": 0.0,
-                "drawer_top_joint": 0.0,
+                "Constraint_480": 0.0,
+                "Constraint_440": 0.0,
+                "Constraint_400": 0.0,
+                "Constraint_360": 0.0,
+                "Constraint_320": 0.0,
+                "Constraint_280": 0.0,
             },
         ),
         actuators={
             "drawers": ImplicitActuatorCfg(
-                joint_names_expr=["drawer_top_joint", "drawer_bottom_joint"],
+                joint_names_expr=["Constraint_480", "Constraint_440", "Constraint_400", "Constraint_360", "Constraint_320", "Constraint_280"],
                 effort_limit=87.0,
                 velocity_limit=100.0,
                 stiffness=10.0,
                 damping=1.0,
-            ),
-            "doors": ImplicitActuatorCfg(
-                joint_names_expr=["door_left_joint", "door_right_joint"],
-                effort_limit=87.0,
-                velocity_limit=100.0,
-                stiffness=10.0,
-                damping=2.5,
             ),
         },
     )
@@ -161,7 +175,7 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     finger_reward_scale = 2.0
 
 
-class FrankaCabinetEnv(DirectRLEnv):
+class FrankaCabinetStochasticEnv(DirectRLEnv):
     # pre-physics step calls
     #   |-- _pre_physics_step(action)
     #   |-- _apply_action()
@@ -171,9 +185,9 @@ class FrankaCabinetEnv(DirectRLEnv):
     #   |-- _reset_idx(env_ids)
     #   |-- _get_observations()
 
-    cfg: FrankaCabinetEnvCfg
+    cfg: FrankaCabinetStochasticEnvCfg
 
-    def __init__(self, cfg: FrankaCabinetEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: FrankaCabinetOursEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
 
         def get_env_local_pose(env_pos: torch.Tensor, xformable: UsdGeom.Xformable, device: torch.device):
@@ -253,7 +267,7 @@ class FrankaCabinetEnv(DirectRLEnv):
         self.hand_link_idx = self._robot.find_bodies("panda_link7")[0][0]
         self.left_finger_link_idx = self._robot.find_bodies("panda_leftfinger")[0][0]
         self.right_finger_link_idx = self._robot.find_bodies("panda_rightfinger")[0][0]
-        self.drawer_link_idx = self._cabinet.find_bodies("drawer_top")[0][0]
+        self.drawer_link_idx = self._cabinet.find_bodies(f"Constraint_{DIRECTION2ID[self.cfg.target_direction]}")[0][0]
 
         self.robot_grasp_rot = torch.zeros((self.num_envs, 4), device=self.device)
         self.robot_grasp_pos = torch.zeros((self.num_envs, 3), device=self.device)
@@ -290,7 +304,7 @@ class FrankaCabinetEnv(DirectRLEnv):
     # post-physics step calls
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        terminated = self._cabinet.data.joint_pos[:, 3] > 0.39
+        terminated = self._cabinet.data.joint_pos[:, 3] > 0.39  #TODO: change the termination condition
         truncated = self.episode_length_buf >= self.max_episode_length - 1
         return terminated, truncated
 
@@ -357,13 +371,11 @@ class FrankaCabinetEnv(DirectRLEnv):
                 dof_pos_scaled,
                 self._robot.data.joint_vel * self.cfg.dof_velocity_scale,
                 to_target,
-                self._cabinet.data.joint_pos[:, 3].unsqueeze(-1),
-                self._cabinet.data.joint_vel[:, 3].unsqueeze(-1),
+                self._cabinet.data.joint_pos[:, 3].unsqueeze(-1),  #TODO: change the observation
+                self._cabinet.data.joint_vel[:, 3].unsqueeze(-1),  #TODO: change the observation
             ),
             dim=-1,
         )
-        ## print("shape:", self._cabinet.data.joint_pos.shape)
-        ## (4096, 4)
         return {"policy": torch.clamp(obs, -5.0, 5.0)}
 
     # auxiliary methods

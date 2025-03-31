@@ -6,7 +6,7 @@
 from dataclasses import MISSING
 
 from isaaclab.utils.configclass import configclass
-
+from typing import Tuple
 
 @configclass
 class InteractiveSceneCfg:
@@ -109,3 +109,8 @@ class InteractiveSceneCfg:
         Collisions can only be filtered automatically in direct workflows when physics replication is enabled.
         If ``replicated_physics=False`` and collision filtering is desired, make sure to call ``scene.filter_collisions()``.
     """
+
+    random_rotation_z: bool = False
+    """Whether to randomize the rotation of the cabinet around the z-axis. Default is False."""
+    random_rotation_z_range: Tuple[float, float] = (-45.0, 45.0)
+    """Range of random rotation around the z-axis. Default is (-45, 45) degrees."""

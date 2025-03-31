@@ -88,7 +88,11 @@ class DirectRLEnv(gym.Env):
         self.render_mode = render_mode
         # initialize internal variables
         self._is_closed = False
-
+        '''from pprint import pprint
+        print("--------------------------------")
+        print("Configuration:")
+        pprint(self.cfg)
+        print("--------------------------------")'''
         # set the seed for the environment
         if self.cfg.seed is not None:
             self.cfg.seed = self.seed(self.cfg.seed)
@@ -124,6 +128,7 @@ class DirectRLEnv(gym.Env):
         # generate scene
         with Timer("[INFO]: Time taken for scene creation", "scene_creation"):
             self.scene = InteractiveScene(self.cfg.scene)
+            print(self.cfg.scene)
             self._setup_scene()
         print("[INFO]: Scene manager: ", self.scene)
 
