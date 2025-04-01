@@ -26,7 +26,8 @@ from isaaclab.utils.math import sample_uniform
 from pxr import Gf, UsdGeom
 import random
 import math
-random.seed(0)
+import time
+random.seed(int(time.time()))
 
 
 @configclass
@@ -54,7 +55,7 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(
         num_envs=4096, env_spacing=4.0, replicate_physics=True,
-        random_rotation_z=True, random_rotation_z_range=(-0.0, 0.0)
+        random_rotation_z=True, random_rotation_z_range=(-45.0, 45.0)
     )
 
     # robot
