@@ -27,7 +27,7 @@ from pxr import Gf, UsdGeom
 import random
 import math
 import time
-random.seed(int(time.time()))
+random.seed(int(time.perf_counter()*1000000))
 
 
 @configclass
@@ -192,8 +192,9 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
 
     def __init__(self, cfg: FrankaCabinetStochasticEnvCfg, render_mode: str | None = None, **kwargs):
         for key, value in kwargs.items():
-            if hasattr(cfg, key) and value is not None:
-                setattr(cfg, key, value)
+            print(f"key: {key}, value: {value}")
+            if hasattr(self, key) and value is not None:
+                setattr(self, key, value)
         
         print("-"*32)
         print("Randomization Settings:")
