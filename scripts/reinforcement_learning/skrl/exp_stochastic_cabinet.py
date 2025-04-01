@@ -5,7 +5,7 @@ import subprocess
 if __name__ == "__main__":
     seeds = (2022, 2024, 2026)
     random_rotation_z_ranges = ((-15, 15), (-30, 30), (-60, 60))
-    random_offset_ranges = ((-0.25, 0.25), (-0.5, 0.5), (-1, 1), (-2, 2))
+    random_offset_ranges = ((-0.25, 0.25), (-0.5, 0.5), (-1, 1))
     
     for seed, random_rotation_z_range, random_offset_range in product(seeds, random_rotation_z_ranges, random_offset_ranges):
         command_components = [
