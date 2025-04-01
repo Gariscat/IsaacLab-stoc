@@ -44,6 +44,31 @@ parser.add_argument(
     choices=["AMP", "PPO", "IPPO", "MAPPO"],
     help="The RL algorithm used for training the skrl agent.",
 )
+parser.add_argument(
+    "--random_rotation_z_range",
+    type=str,
+    default=None,
+    help="The range of random rotation in the z-axis.",
+)
+parser.add_argument(
+    "--random_offset_x_range",
+    type=str,
+    default=None,
+    help="The range of random offset in the x-axis.",
+)
+parser.add_argument(
+    "--random_offset_y_range",
+    type=str,
+    default=None,
+    help="The range of random offset in the y-axis.",
+)
+parser.add_argument(
+    "--random_offset_z_range",
+    type=str,
+    default=None,
+    help="The range of random offset in the z-axis.",
+)
+
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -159,7 +184,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     resume_path = retrieve_file_path(args_cli.checkpoint) if args_cli.checkpoint else None
 
     # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    env = gym.make(
+        args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None,
+        random_rotation_z_range=map(float, args_cli.random_rotation_z_range.split("-")) if args_cli.random_rotation_z_range else None,
+        random_offset_x_range=map(float, args_cli.random_offset_x_range.split("-")) if args_cli.random_offset_x_range else None,
+        random_offset_y_range=map(float, args_cli.random_offset_y_range.split("-")) if args_cli.random_offset_y_range else None,
+        random_offset_z_range=map(float, args_cli.random_offset_z_range.split("-")) if args_cli.random_offset_z_range else None,
+    )
 
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:

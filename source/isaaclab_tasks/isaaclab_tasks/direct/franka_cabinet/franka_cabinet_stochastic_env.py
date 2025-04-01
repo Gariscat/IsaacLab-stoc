@@ -172,17 +172,7 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     action_penalty_scale = 0.05
     finger_reward_scale = 2.0
     
-    random_rotation_z: bool = False
-    random_rotation_z_range: tuple[float, float] = (0, 0)
     
-    """def __init__(self, **kwargs):
-        super().__init__()
-        
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)"""
-
-
 class FrankaCabinetStochasticEnv(DirectRLEnv):
     # pre-physics step calls
     #   |-- _pre_physics_step(action)
@@ -194,8 +184,25 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
     #   |-- _get_observations()
 
     cfg: FrankaCabinetStochasticEnvCfg
+    
+    random_rotation_z_range: tuple[float, float] = (-15, 15)
+    random_offset_x_range: tuple[float, float] = (-0.1, 0.1)
+    random_offset_y_range: tuple[float, float] = (-0.1, 0.1)
+    random_offset_z_range: tuple[float, float] = (-0.1, 0.1)
 
     def __init__(self, cfg: FrankaCabinetStochasticEnvCfg, render_mode: str | None = None, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(cfg, key) and value is not None:
+                setattr(cfg, key, value)
+        
+        print("-"*32)
+        print("Randomization Settings:")
+        print("random_rotation_z_range:", self.random_rotation_z_range)
+        print("random_offset_x_range:", self.random_offset_x_range)
+        print("random_offset_y_range:", self.random_offset_y_range)
+        print("random_offset_z_range:", self.random_offset_z_range)
+        print("-"*32)
+        
         super().__init__(cfg, render_mode, **kwargs)
 
         def get_env_local_pose(env_pos: torch.Tensor, xformable: UsdGeom.Xformable, device: torch.device):
@@ -299,28 +306,34 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
         
-        if self.cfg.random_rotation_z:
-            for env_id, env_prim_path in enumerate(self.scene.env_prim_paths):
-                if env_id == 0:  # 0 is the source environment, which if modified, would impact all the cloned environments
-                    continue
-                rand_z_rot = random.uniform(*self.cfg.random_rotation_z_range)
+        for env_id, env_prim_path in enumerate(self.scene.env_prim_paths):
+            if env_id == 0:  # 0 is the source environment, which if modified, would impact all the cloned environments
+                continue
+            rand_z_rot = random.uniform(*self.random_rotation_z_range)
+            rand_x_offset = random.uniform(*self.random_offset_x_range)
+            rand_y_offset = random.uniform(*self.random_offset_y_range)
+            rand_z_offset = random.uniform(*self.random_offset_z_range)
+            rand_translate = Gf.Vec3d(rand_x_offset, rand_y_offset, rand_z_offset)
                 
-                env_prim = self.scene.stage.GetPrimAtPath(env_prim_path+"/Cabinet")
+            cabinet_prim = self.scene.stage.GetPrimAtPath(env_prim_path+"/Cabinet")
+            cabinet_xform = UsdGeom.Xformable(cabinet_prim)
+            
+            """print("cabinet_prim:", cabinet_prim)
+            for i, op in enumerate(cabinet_xform.GetOrderedXformOps()):
+                print(i, op.GetName())"""
                 
-                ## print("env_prim:", env_prim_path)
-                ## print("env_prim type:", type(env_prim))
-                UsdGeom.Xformable(env_prim).AddRotateXYZOp()
-                """print("Xformable dir:", dir(xform))
-                xform.SetRotate(Gf.Rotation(Gf.Vec3d(0, 0, 1), random.uniform(-math.pi / 4, math.pi / 4)))"""
-                """reset_and_set_xform_ops(
-                    prim=xform,
-                    translation=Gf.Vec3d(0, 0, 0),
-                    rotation=Gf.Rotation(Gf.Vec3d(0, 0, 1), random.uniform(-math.pi / 4, math.pi / 4)).GetQuat(),
-                )"""
-                ## print(type(xform))
-                # https://docs.isaacsim.omniverse.nvidia.com/latest/replicator_tutorials/tutorial_replicator_isaac_randomizers.html#sequential-randomizations
-                env_prim.GetAttribute("xformOp:rotateXYZ").Set(Gf.Vec3d(0, 0, rand_z_rot))
-
+            cabinet_xform.AddRotateXYZOp()
+            ## print("check existing translate op:", cabinet_prim.GetAttribute("xformOp:translate"), )
+            # cabinet_xform.AddTranslateOp()
+            ### Do not add translate op, because it will collide with the existing translate op
+            original_translate = cabinet_prim.GetAttribute("xformOp:translate").Get()
+            new_translate = original_translate + rand_translate
+            ## print("new_translate:", new_translate)
+            ## print(type(xform))
+            ### https://docs.isaacsim.omniverse.nvidia.com/latest/replicator_tutorials/tutorial_replicator_isaac_randomizers.html#sequential-randomizations
+            cabinet_prim.GetAttribute("xformOp:rotateXYZ").Set(Gf.Vec3d(0, 0, rand_z_rot))
+            cabinet_prim.GetAttribute("xformOp:translate").Set(new_translate)
+            
     # pre-physics step calls
 
     def _pre_physics_step(self, actions: torch.Tensor):
