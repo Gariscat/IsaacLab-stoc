@@ -10,7 +10,7 @@ if __name__ == "__main__":
     for seed, random_rotation_z_range, random_offset_range in product(seeds, random_rotation_z_ranges, random_offset_ranges):
         command_components = [
             "python",
-            "train_stochastic_cabinet.py",
+            "scripts/reinforcement_learning/skrl/train_stochastic_cabinet.py",
             "--seed", str(seed),
             "--random_rotation_z_range", ' '.join(map(str, random_rotation_z_range)),
             "--random_offset_x_range", ' '.join(map(str, random_offset_range)),
