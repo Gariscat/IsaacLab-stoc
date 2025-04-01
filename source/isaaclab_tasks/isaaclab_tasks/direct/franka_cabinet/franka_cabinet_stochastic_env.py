@@ -55,7 +55,6 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(
         num_envs=4096, env_spacing=4.0, replicate_physics=True,
-        random_rotation_z=True, random_rotation_z_range=(-45.0, 45.0)
     )
 
     # robot
@@ -172,6 +171,16 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     open_reward_scale = 10.0
     action_penalty_scale = 0.05
     finger_reward_scale = 2.0
+    
+    random_rotation_z: bool = False
+    random_rotation_z_range: tuple[float, float] = (0, 0)
+    
+    """def __init__(self, **kwargs):
+        super().__init__()
+        
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)"""
 
 
 class FrankaCabinetStochasticEnv(DirectRLEnv):
@@ -290,11 +299,11 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
         
-        if self.scene.cfg.random_rotation_z:
+        if self.cfg.random_rotation_z:
             for env_id, env_prim_path in enumerate(self.scene.env_prim_paths):
                 if env_id == 0:  # 0 is the source environment, which if modified, would impact all the cloned environments
                     continue
-                rand_z_rot = random.uniform(*self.scene.cfg.random_rotation_z_range)
+                rand_z_rot = random.uniform(*self.cfg.random_rotation_z_range)
                 
                 env_prim = self.scene.stage.GetPrimAtPath(env_prim_path+"/Cabinet")
                 
