@@ -73,7 +73,7 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-stochastic-cabinet"
+      project: "isaac-lab-stochastic-cabinet-grid"
       # name:
 
 # Sequential trainer
