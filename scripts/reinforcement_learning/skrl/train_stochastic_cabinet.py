@@ -46,25 +46,29 @@ parser.add_argument(
 )
 parser.add_argument(
     "--random_rotation_z_range",
-    type=str,
+    type=float,
+    nargs=2,
     default=None,
     help="The range of random rotation in the z-axis.",
 )
 parser.add_argument(
     "--random_offset_x_range",
-    type=str,
+    type=float,
+    nargs=2,
     default=None,
     help="The range of random offset in the x-axis.",
 )
 parser.add_argument(
     "--random_offset_y_range",
-    type=str,
+    type=float,
+    nargs=2,
     default=None,
     help="The range of random offset in the y-axis.",
 )
 parser.add_argument(
     "--random_offset_z_range",
-    type=str,
+    type=float,
+    nargs=2,
     default=None,
     help="The range of random offset in the z-axis.",
 )
@@ -94,6 +98,7 @@ from datetime import datetime
 
 import skrl
 from packaging import version
+import wandb
 
 # check for minimum supported skrl version
 SKRL_VERSION = "1.4.2"
@@ -186,10 +191,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # create isaac environment
     env = gym.make(
         args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None,
-        random_rotation_z_range=map(float, args_cli.random_rotation_z_range.split("-")) if args_cli.random_rotation_z_range else None,
-        random_offset_x_range=map(float, args_cli.random_offset_x_range.split("-")) if args_cli.random_offset_x_range else None,
-        random_offset_y_range=map(float, args_cli.random_offset_y_range.split("-")) if args_cli.random_offset_y_range else None,
-        random_offset_z_range=map(float, args_cli.random_offset_z_range.split("-")) if args_cli.random_offset_z_range else None,
+        random_rotation_z_range=tuple(args_cli.random_rotation_z_range) if args_cli.random_rotation_z_range else None,
+        random_offset_x_range=tuple(args_cli.random_offset_x_range) if args_cli.random_offset_x_range else None,
+        random_offset_y_range=tuple(args_cli.random_offset_y_range) if args_cli.random_offset_y_range else None,
+        random_offset_z_range=tuple(args_cli.random_offset_z_range) if args_cli.random_offset_z_range else None,
     )
 
     # convert to single-agent instance if required by the RL algorithm
@@ -214,7 +219,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
     runner = Runner(env, agent_cfg)
-
+    assert wandb.run is not None
+    ## print("check wandb run name:", wandb.run.name)
+    wandb.run.name = f"seed_{args_cli.seed}-rot_z_{args_cli.random_rotation_z_range}-off_x_{args_cli.random_offset_x_range}-off_y_{args_cli.random_offset_y_range}-off_z_{args_cli.random_offset_z_range}"
     # load checkpoint (if specified)
     if resume_path:
         print(f"[INFO] Loading model checkpoint from: {resume_path}")
