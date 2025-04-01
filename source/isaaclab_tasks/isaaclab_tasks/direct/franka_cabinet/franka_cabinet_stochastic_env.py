@@ -26,8 +26,8 @@ from isaaclab.utils.math import sample_uniform
 from pxr import Gf, UsdGeom
 import random
 import math
-import time
-random.seed(int(time.perf_counter()*1000000))
+"""import time
+random.seed(int(time.perf_counter()*1000000))"""
 
 
 @configclass
