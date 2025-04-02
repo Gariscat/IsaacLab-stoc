@@ -234,6 +234,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         wandb.log({"random_offset_x_range": args_cli.random_offset_x_range})
         wandb.log({"random_offset_y_range": args_cli.random_offset_y_range})
         wandb.log({"random_offset_z_range": args_cli.random_offset_z_range})
+        wandb.log({"add_rot_to_obs": args_cli.add_rot_to_obs})
     # load checkpoint (if specified)
     if resume_path:
         print(f"[INFO] Loading model checkpoint from: {resume_path}")
