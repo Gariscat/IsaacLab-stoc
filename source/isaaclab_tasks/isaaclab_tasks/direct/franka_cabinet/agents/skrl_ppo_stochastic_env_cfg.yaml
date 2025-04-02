@@ -73,12 +73,12 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-stochastic-cabinet-grid"
+      project: "isaac-lab-stochastic-cabinet-2nd-grid"
       # name:
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 30000
+  timesteps: 24000
   environment_info: log

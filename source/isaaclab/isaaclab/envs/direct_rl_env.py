@@ -102,6 +102,7 @@ class DirectRLEnv(gym.Env):
         # create a simulation context to control the simulator
         if SimulationContext.instance() is None:
             self.sim: SimulationContext = SimulationContext(self.cfg.sim)
+            print("Simulation Config:", self.cfg.sim)
         else:
             raise RuntimeError("Simulation context already exists. Cannot create a new one.")
 
