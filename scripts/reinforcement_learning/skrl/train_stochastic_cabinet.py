@@ -72,6 +72,12 @@ parser.add_argument(
     default=None,
     help="The range of random offset in the z-axis.",
 )
+parser.add_argument(
+    "--add_rot_to_obs",
+    action="store_true",
+    default=False,
+    help="Add the rotation of the cabinet to the observation.",
+)
 
 
 # append AppLauncher cli args
@@ -195,6 +201,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         random_offset_x_range=tuple(args_cli.random_offset_x_range) if args_cli.random_offset_x_range else None,
         random_offset_y_range=tuple(args_cli.random_offset_y_range) if args_cli.random_offset_y_range else None,
         random_offset_z_range=tuple(args_cli.random_offset_z_range) if args_cli.random_offset_z_range else None,
+        add_rot_to_obs=args_cli.add_rot_to_obs,
     )
 
     # convert to single-agent instance if required by the RL algorithm
@@ -219,14 +226,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
     runner = Runner(env, agent_cfg)
-    assert wandb.run is not None
+    if wandb.run is not None:
     ## print("check wandb run name:", wandb.run.name)
-    wandb.run.name = f"seed_{args_cli.seed}-rot_z_{args_cli.random_rotation_z_range}-off_x_{args_cli.random_offset_x_range}-off_y_{args_cli.random_offset_y_range}-off_z_{args_cli.random_offset_z_range}"
-    wandb.log({"seed": args_cli.seed})
-    wandb.log({"random_rotation_z_range": args_cli.random_rotation_z_range})
-    wandb.log({"random_offset_x_range": args_cli.random_offset_x_range})
-    wandb.log({"random_offset_y_range": args_cli.random_offset_y_range})
-    wandb.log({"random_offset_z_range": args_cli.random_offset_z_range})
+        wandb.run.name = f"seed_{args_cli.seed}-rot_z_{args_cli.random_rotation_z_range}-off_x_{args_cli.random_offset_x_range}-off_y_{args_cli.random_offset_y_range}-off_z_{args_cli.random_offset_z_range}"
+        wandb.log({"seed": args_cli.seed})
+        wandb.log({"random_rotation_z_range": args_cli.random_rotation_z_range})
+        wandb.log({"random_offset_x_range": args_cli.random_offset_x_range})
+        wandb.log({"random_offset_y_range": args_cli.random_offset_y_range})
+        wandb.log({"random_offset_z_range": args_cli.random_offset_z_range})
     # load checkpoint (if specified)
     if resume_path:
         print(f"[INFO] Loading model checkpoint from: {resume_path}")

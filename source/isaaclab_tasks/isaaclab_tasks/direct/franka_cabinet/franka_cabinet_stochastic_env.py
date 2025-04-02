@@ -189,6 +189,29 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
     random_offset_x_range: tuple[float, float] = (-0.1, 0.1)
     random_offset_y_range: tuple[float, float] = (-0.1, 0.1)
     random_offset_z_range: tuple[float, float] = (-0.1, 0.1)
+    
+    add_rot_to_obs: bool = False
+    
+    def _get_z_trig_from_quat(self, quat: torch.Tensor) -> torch.Tensor:
+        """
+        Convert a quaternion to a (sin, cos) pair.
+        Assume the quaternion only has a z-axis rotation.
+        w = cos(theta/2)
+        x = u_x * sin(theta/2)
+        y = u_y * sin(theta/2)
+        z = u_z * sin(theta/2)
+        
+        Args:
+            quat (torch.Tensor): A tensor of shape (..., 4) representing quaternions.
+            
+        Returns:
+            torch.Tensor: A tensor of shape (..., 2) representing the sine and cosine of the angle.
+        """
+        assert torch.allclose((quat**2).sum(dim=-1), torch.ones(quat.shape[0]).to(quat.device))
+        angle = torch.acos(quat[:, 0]) * 2
+        sin_theta = torch.sin(angle)
+        cos_theta = torch.cos(angle)
+        return torch.stack((sin_theta, cos_theta), dim=-1)
 
     def __init__(self, cfg: FrankaCabinetStochasticEnvCfg, render_mode: str | None = None, **kwargs):
         for key, value in kwargs.items():
@@ -202,7 +225,11 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         print("random_offset_x_range:", self.random_offset_x_range)
         print("random_offset_y_range:", self.random_offset_y_range)
         print("random_offset_z_range:", self.random_offset_z_range)
+        print("add_rot_to_obs:", self.add_rot_to_obs)
         print("-"*32)
+        
+        if self.add_rot_to_obs:
+            cfg.observation_space += 2
         
         super().__init__(cfg, render_mode, **kwargs)
 
@@ -409,7 +436,8 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
             - 1.0
         )
         to_target = self.drawer_grasp_pos - self.robot_grasp_pos
-
+        ## print(dir(self._cabinet.data))
+        ## print(self._cabinet.data.root_quat_w.shape)
         obs = torch.cat(
             (
                 dof_pos_scaled,
@@ -422,6 +450,8 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         )
         ## print("shape:", self._cabinet.data.joint_pos.shape)
         ## (4096, 4)
+        if self.add_rot_to_obs:
+            obs = torch.cat((obs, self._get_z_trig_from_quat(self._cabinet.data.body_quat_w[:, 0, :])), dim=-1)
         return {"policy": torch.clamp(obs, -5.0, 5.0)}
 
     # auxiliary methods
