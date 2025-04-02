@@ -63,3 +63,4 @@ _build
 
 # training logs
 **/outputs/*
+grid_log.txt
