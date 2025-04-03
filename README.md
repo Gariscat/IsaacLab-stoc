@@ -1,3 +1,5 @@
+*(This is a fork from the official Isaac Lab repo, that implements randomization in manipulation tasks for reinforcement learning.)*
+
 ![Isaac Lab](docs/source/_static/isaaclab.jpg)
 
 ---
