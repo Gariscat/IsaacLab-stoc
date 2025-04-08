@@ -31,7 +31,7 @@ random.seed(int(time.perf_counter()*1000000))"""
 
 
 @configclass
-class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
+class FrankaMicrowaveStochasticEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 8.3333  # 500 timesteps
     decimation = 2
@@ -173,7 +173,7 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     finger_reward_scale = 2.0
     
     
-class FrankaCabinetStochasticEnv(DirectRLEnv):
+class FrankaMicrowaveStochasticEnv(DirectRLEnv):
     # pre-physics step calls
     #   |-- _pre_physics_step(action)
     #   |-- _apply_action()
@@ -183,7 +183,7 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
     #   |-- _reset_idx(env_ids)
     #   |-- _get_observations()
 
-    cfg: FrankaCabinetStochasticEnvCfg
+    cfg: FrankaMicrowaveStochasticEnvCfg
     
     random_rotation_z_range: tuple[float, float] = (-15, 15)
     random_offset_x_range: tuple[float, float] = (-0.1, 0.1)
@@ -213,7 +213,7 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         cos_theta = torch.cos(angle)
         return torch.stack((sin_theta, cos_theta), dim=-1)
 
-    def __init__(self, cfg: FrankaCabinetStochasticEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: FrankaMicrowaveStochasticEnvCfg, render_mode: str | None = None, **kwargs):
         for key, value in kwargs.items():
             print(f"key: {key}, value: {value}")
             if hasattr(self, key) and value is not None:
@@ -262,60 +262,9 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         self.robot_dof_targets = torch.zeros((self.num_envs, self._robot.num_joints), device=self.device)
 
         stage = get_current_stage()
-        hand_pose = get_env_local_pose(
-            self.scene.env_origins[0],
-            UsdGeom.Xformable(stage.GetPrimAtPath("/World/envs/env_0/Robot/panda_link7")),
-            self.device,
-        )
-        lfinger_pose = get_env_local_pose(
-            self.scene.env_origins[0],
-            UsdGeom.Xformable(stage.GetPrimAtPath("/World/envs/env_0/Robot/panda_leftfinger")),
-            self.device,
-        )
-        rfinger_pose = get_env_local_pose(
-            self.scene.env_origins[0],
-            UsdGeom.Xformable(stage.GetPrimAtPath("/World/envs/env_0/Robot/panda_rightfinger")),
-            self.device,
-        )
-
-        finger_pose = torch.zeros(7, device=self.device)
-        finger_pose[0:3] = (lfinger_pose[0:3] + rfinger_pose[0:3]) / 2.0
-        finger_pose[3:7] = lfinger_pose[3:7]
-        hand_pose_inv_rot, hand_pose_inv_pos = tf_inverse(hand_pose[3:7], hand_pose[0:3])
-
-        robot_local_grasp_pose_rot, robot_local_pose_pos = tf_combine(
-            hand_pose_inv_rot, hand_pose_inv_pos, finger_pose[3:7], finger_pose[0:3]
-        )
-        robot_local_pose_pos += torch.tensor([0, 0.04, 0], device=self.device)
-        self.robot_local_grasp_pos = robot_local_pose_pos.repeat((self.num_envs, 1))
-        self.robot_local_grasp_rot = robot_local_grasp_pose_rot.repeat((self.num_envs, 1))
-
-        drawer_local_grasp_pose = torch.tensor([0.3, 0.01, 0.0, 1.0, 0.0, 0.0, 0.0], device=self.device)
-        self.drawer_local_grasp_pos = drawer_local_grasp_pose[0:3].repeat((self.num_envs, 1))
-        self.drawer_local_grasp_rot = drawer_local_grasp_pose[3:7].repeat((self.num_envs, 1))
-
-        self.gripper_forward_axis = torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(
-            (self.num_envs, 1)
-        )
-        self.drawer_inward_axis = torch.tensor([-1, 0, 0], device=self.device, dtype=torch.float32).repeat(
-            (self.num_envs, 1)
-        )
-        self.gripper_up_axis = torch.tensor([0, 1, 0], device=self.device, dtype=torch.float32).repeat(
-            (self.num_envs, 1)
-        )
-        self.drawer_up_axis = torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(
-            (self.num_envs, 1)
-        )
-
-        self.hand_link_idx = self._robot.find_bodies("panda_link7")[0][0]
-        self.left_finger_link_idx = self._robot.find_bodies("panda_leftfinger")[0][0]
-        self.right_finger_link_idx = self._robot.find_bodies("panda_rightfinger")[0][0]
-        self.drawer_link_idx = self._cabinet.find_bodies("drawer_top")[0][0]
-
-        self.robot_grasp_rot = torch.zeros((self.num_envs, 4), device=self.device)
-        self.robot_grasp_pos = torch.zeros((self.num_envs, 3), device=self.device)
-        self.drawer_grasp_rot = torch.zeros((self.num_envs, 4), device=self.device)
-        self.drawer_grasp_pos = torch.zeros((self.num_envs, 3), device=self.device)
+        
+        
+        
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -343,24 +292,24 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
             rand_z_offset = random.uniform(*self.random_offset_z_range)
             rand_translate = Gf.Vec3d(rand_x_offset, rand_y_offset, rand_z_offset)
                 
-            cabinet_prim = self.scene.stage.GetPrimAtPath(env_prim_path+"/Cabinet")
-            cabinet_xform = UsdGeom.Xformable(cabinet_prim)
+            microwave_prim = self.scene.stage.GetPrimAtPath(env_prim_path+"/Microwave")
+            microwave_xform = UsdGeom.Xformable(microwave_prim)
             
             """print("cabinet_prim:", cabinet_prim)
             for i, op in enumerate(cabinet_xform.GetOrderedXformOps()):
                 print(i, op.GetName())"""
                 
-            cabinet_xform.AddRotateXYZOp()
+            microwave_xform.AddRotateXYZOp()
             ## print("check existing translate op:", cabinet_prim.GetAttribute("xformOp:translate"), )
             # cabinet_xform.AddTranslateOp()
             ### Do not add translate op, since it would collide with the existing translate op
-            original_translate = cabinet_prim.GetAttribute("xformOp:translate").Get()
+            original_translate = microwave_prim.GetAttribute("xformOp:translate").Get()
             new_translate = original_translate + rand_translate
             ## print("new_translate:", new_translate)
             ## print(type(xform))
             ### https://docs.isaacsim.omniverse.nvidia.com/latest/replicator_tutorials/tutorial_replicator_isaac_randomizers.html#sequential-randomizations
-            cabinet_prim.GetAttribute("xformOp:rotateXYZ").Set(Gf.Vec3d(0, 0, rand_z_rot))
-            cabinet_prim.GetAttribute("xformOp:translate").Set(new_translate)
+            microwave_prim.GetAttribute("xformOp:rotateXYZ").Set(Gf.Vec3d(0, 0, rand_z_rot))
+            microwave_prim.GetAttribute("xformOp:translate").Set(new_translate)
             
     # pre-physics step calls
 
@@ -385,7 +334,7 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         robot_left_finger_pos = self._robot.data.body_pos_w[:, self.left_finger_link_idx]
         robot_right_finger_pos = self._robot.data.body_pos_w[:, self.right_finger_link_idx]
 
-        rewards = self._compute_rewards(
+        return self._compute_rewards(
             self.actions,
             self._cabinet.data.joint_pos,
             self.robot_grasp_pos,
@@ -406,8 +355,7 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
             self.cfg.finger_reward_scale,
             self._robot.data.joint_pos,
         )
-        return rewards
-    
+
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
         # robot state
@@ -452,11 +400,7 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         ## print("shape:", self._cabinet.data.joint_pos.shape)
         ## (4096, 4)
         if self.add_rot_to_obs:
-            ## print("original obs:", obs.shape)
-            z_trig = self._get_z_trig_from_quat(self._cabinet.data.body_quat_w[:, 0, :])
-            ## print("z_trig:", z_trig)
-            obs = torch.cat((obs, z_trig), dim=-1)
-            ## print("new obs:", obs.shape)
+            obs = torch.cat((obs, self._get_z_trig_from_quat(self._cabinet.data.body_quat_w[:, 0, :])), dim=-1)
         return {"policy": torch.clamp(obs, -5.0, 5.0)}
 
     # auxiliary methods
@@ -547,31 +491,6 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
             + finger_reward_scale * finger_dist_penalty
             - action_penalty_scale * action_penalty
         )
-        '''print("dist_reward:", dist_reward.mean())
-        print("rot_reward:", rot_reward.mean())
-        print("open_reward:", open_reward.mean())
-        print("finger_dist_penalty:", finger_dist_penalty.mean())
-        print("action_penalty:", action_penalty.mean())'''
-        if torch.isnan(dist_reward.mean()).item():
-            print("distance:", d)
-            print("dist reward:", dist_reward)
-            dist_reward = dist_reward.flatten()
-            for i in range(dist_reward.shape[0]):
-                if torch.isnan(dist_reward[i]).item():
-                    print("-"*32)
-                    print("NaN detected in dist reward")
-                    print("env_id:", i)
-                    print("distance:", d[i])
-                    print("franka grasp pos:", franka_grasp_pos[i])
-                    print("drawer grasp pos:", drawer_grasp_pos[i])
-                    print("franka grasp rot:", franka_grasp_rot[i])
-                    print("drawer grasp rot:", drawer_grasp_rot[i])
-                    print("franka local grasp rot:", self.robot_local_grasp_rot[i])
-                    print("drawer local grasp rot:", self.drawer_local_grasp_rot[i])
-                    print("franka local grasp pos:", self.robot_local_grasp_pos[i])
-                    print("drawer local grasp pos:", self.drawer_local_grasp_pos[i])
-                    print("-"*32)
-            exit()
 
         self.extras["log"] = {
             "dist_reward": (dist_reward_scale * dist_reward).mean(),
