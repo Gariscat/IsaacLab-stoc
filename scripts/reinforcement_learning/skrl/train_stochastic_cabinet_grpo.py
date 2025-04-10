@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+### DEPRECATED ###
+
 """
 Script to train RL agent with skrl.
 
@@ -130,8 +132,7 @@ from isaaclab.envs import (
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_pickle, dump_yaml
-
-from isaaclab_rl.skrl import SkrlVecEnvWrapper
+from isaaclab.envs import DirectRLEnv
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
@@ -142,6 +143,38 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 algorithm = args_cli.algorithm.lower()
 agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
 
+"""import torch
+from typing import Dict, List, Tuple
+
+class PolicyNet(torch.nn.Module):
+    def __init__(self, obs_dim: int, action_dim: int):
+        super().__init__()
+        self.fc1 = torch.nn.Linear(obs_dim, 128)
+        self.fc2 = torch.nn.Linear(128, 128)
+        self.fc3 = torch.nn.Linear(128, action_dim)
+
+class GRPORunner:
+    # Reference: https://mp.weixin.qq.com/s/t877SiSqjliPwRTmenZOww
+    def __init__(self, env: DirectRLEnv, cfg: Dict[str, Any]):
+        self.env = env
+        self.cfg = cfg
+        self.obs_dim = self.env.observation_space.shape[0]
+        self.action_dim = self.env.action_space.shape[0]
+        
+        self.device = device
+        self.policy_net = PolicyNet(self.obs_dim, self.action_dim).to(self.device)
+        self.opt = torch.optim.Adam(self.policy_net.parameters(), lr=self.cfg["lr"])
+        
+    def collect_trajectories(self):
+        pass
+    
+    def update(self):
+        pass
+    
+    def run(self):
+        for i in range(self.cfg["num_episodes"]):
+            trajectories, episode_rewards = self.collect_trajectories()
+            self.update(trajectories)"""
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
