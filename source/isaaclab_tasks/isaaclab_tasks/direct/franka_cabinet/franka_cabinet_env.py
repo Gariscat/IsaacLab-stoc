@@ -325,6 +325,10 @@ class FrankaCabinetEnv(DirectRLEnv):
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
+        ## print(dir(self._robot.data))
+        ## print(self._robot.data.joint_pos)
+        ## print(self._robot.data.joint_pos_target)
+        ## print(vars(self._robot.data))
         # robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids] + sample_uniform(
             -0.125,
@@ -343,6 +347,24 @@ class FrankaCabinetEnv(DirectRLEnv):
 
         # Need to refresh the intermediate values so that _get_observations() can use the latest values
         self._compute_intermediate_values(env_ids)
+        
+    def sync_state(self, source_env_id: int = None):
+        ### FOR GRPO ROLLOUTS ###
+        # clone the state of source_env_id all other envs
+        if source_env_id is None:
+            source_env_id = torch.randint(0, self.num_envs, (1,)).item()
+            
+        # get the source state
+        source_robot_joint_pos = self._robot.data.joint_pos[source_env_id]
+        source_robot_joint_vel = self._robot.data.joint_vel[source_env_id]
+        
+        source_cabinet_joint_pos = self._cabinet.data.joint_pos[source_env_id]
+        source_cabinet_joint_vel = self._cabinet.data.joint_vel[source_env_id]
+        
+        # set states for all envs
+        self._robot.write_joint_state_to_sim(source_robot_joint_pos, source_robot_joint_vel)
+        self._cabinet.write_joint_state_to_sim(source_cabinet_joint_pos, source_cabinet_joint_vel)
+            
 
     def _get_observations(self) -> dict:
         dof_pos_scaled = (
