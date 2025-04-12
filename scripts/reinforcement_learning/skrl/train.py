@@ -46,7 +46,6 @@ parser.add_argument(
 )
 parser.add_argument(
     "--debug",
-    type=bool,
     action="store_true"
 )
 
