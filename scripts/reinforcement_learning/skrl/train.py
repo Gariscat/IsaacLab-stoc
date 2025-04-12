@@ -44,6 +44,11 @@ parser.add_argument(
     choices=["AMP", "PPO", "IPPO", "MAPPO", "GRPO"],
     help="The RL algorithm used for training the skrl agent.",
 )
+parser.add_argument(
+    "--debug",
+    type=bool,
+    action="store_true"
+)
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -101,6 +106,9 @@ import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 import wandb
 # PLACEHOLDER: Extension template (do not remove this comment)
+if args_cli.debug:
+    import os
+    os.environ["WANDB_MODE"] = "disabled"
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
