@@ -72,9 +72,9 @@ agent:
     write_interval: auto
     checkpoint_interval: auto
 
-    wandb: False
+    wandb: True
     wandb_kwargs:
-      project: "isaac-lab-cabinet-grpo"
+      project: "isaac-lab-cabinet-grpo-correct"
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
