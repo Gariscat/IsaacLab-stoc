@@ -22,6 +22,8 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import sample_uniform
 
+from math import ceil
+
 
 @configclass
 class FrankaCabinetEnvCfg(DirectRLEnvCfg):
@@ -348,22 +350,40 @@ class FrankaCabinetEnv(DirectRLEnv):
         # Need to refresh the intermediate values so that _get_observations() can use the latest values
         self._compute_intermediate_values(env_ids)
         
-    def sync_state(self, source_env_id: int = None):
+    def sync_state(self, group_size: int = None):
         ### FOR GRPO ROLLOUTS ###
         # clone the state of source_env_id all other envs
-        if source_env_id is None:
-            source_env_id = torch.randint(0, self.num_envs, (1,)).item()
+        if group_size is None:
+            group_size = self.num_envs
+        
+        num_slices = int(ceil(self.num_envs/group_size))
+        for i in range(num_slices):
+            st = i * group_size
+            ed = min(self.num_envs, (i + 1) * group_size)
+            cur_slice = torch.arange(st, ed).to(self.device)
             
-        # get the source state
-        source_robot_joint_pos = self._robot.data.joint_pos[source_env_id]
-        source_robot_joint_vel = self._robot.data.joint_vel[source_env_id]
-        
-        source_cabinet_joint_pos = self._cabinet.data.joint_pos[source_env_id]
-        source_cabinet_joint_vel = self._cabinet.data.joint_vel[source_env_id]
-        
-        # set states for all envs
-        self._robot.write_joint_state_to_sim(source_robot_joint_pos, source_robot_joint_vel)
-        self._cabinet.write_joint_state_to_sim(source_cabinet_joint_pos, source_cabinet_joint_vel)
+            source_env_id = torch.randint(st, ed, (1,)).item()
+                
+            # get the source state
+            source_robot_joint_pos = self._robot.data.joint_pos[source_env_id].clone()
+            source_robot_joint_vel = self._robot.data.joint_vel[source_env_id].clone()
+            
+            source_cabinet_joint_pos = self._cabinet.data.joint_pos[source_env_id].clone()
+            source_cabinet_joint_vel = self._cabinet.data.joint_vel[source_env_id].clone()
+
+            # set states for all envs
+            self._robot.write_joint_state_to_sim(
+                position=source_robot_joint_pos,
+                velocity=source_robot_joint_vel,
+                env_ids=cur_slice
+            )
+            self._cabinet.write_joint_state_to_sim(
+                position=source_cabinet_joint_pos,
+                velocity=source_cabinet_joint_vel,
+                env_ids=cur_slice
+            )
+            
+            self._compute_intermediate_values(cur_slice)
             
 
     def _get_observations(self) -> dict:

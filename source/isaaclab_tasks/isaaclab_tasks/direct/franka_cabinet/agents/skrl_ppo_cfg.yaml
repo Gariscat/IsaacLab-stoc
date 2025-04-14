@@ -71,9 +71,9 @@ agent:
     write_interval: auto
     checkpoint_interval: auto
 
-    wandb: False
+    wandb: True
     wandb_kwargs:
-      project: "isaac-lab-stochastic-cabinet"
+      project: "isaac-lab-cabinet-ppo-comp"
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
