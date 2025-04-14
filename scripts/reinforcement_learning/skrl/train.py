@@ -45,6 +45,11 @@ parser.add_argument(
     help="The RL algorithm used for training the skrl agent.",
 )
 parser.add_argument(
+    "--group_size",
+    type=int,
+    default=64,
+)
+parser.add_argument(
     "--debug",
     action="store_true"
 )
@@ -141,8 +146,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent_cfg["seed"] = args_cli.seed if args_cli.seed is not None else agent_cfg["seed"]
     env_cfg.seed = agent_cfg["seed"]
     
+    # deactivate wandb if under debug mode
     if args_cli.debug:
         agent_cfg["agent"]["experiment"]["wandb"] = False
+    
+    # set group_size for GRPO
+    if args_cli.algorithm == "GRPO":
+        agent_cfg["trainer"]["group_size"] = args_cli.group_size
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "skrl", agent_cfg["agent"]["experiment"]["directory"])
@@ -195,6 +205,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = Runner(env, agent_cfg)
     if wandb.run is not None:
         wandb.log({"seed": args_cli.seed})
+        if args_cli.algorithm == "GRPO":
+            wandb.log({"group_size": args_cli.group_size})
     # load checkpoint (if specified)
     if resume_path:
         print(f"[INFO] Loading model checkpoint from: {resume_path}")
