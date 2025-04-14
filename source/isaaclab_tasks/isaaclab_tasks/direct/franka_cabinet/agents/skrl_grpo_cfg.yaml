@@ -74,7 +74,9 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-cabinet-grpo-correct"
+      project: "isaac-lab-cabinet-grpo-grouped"
+
+  select_policy: "advantageous"  # random / advantageous
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
@@ -82,4 +84,4 @@ trainer:
   class: GRPOTrainer
   timesteps: 24000
   environment_info: log
-  group_size: 4096
+  group_size: 8

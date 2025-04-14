@@ -50,6 +50,11 @@ parser.add_argument(
     default=64,
 )
 parser.add_argument(
+    "--select_policy",
+    type=str,
+    default="advantageous",
+)
+parser.add_argument(
     "--debug",
     action="store_true"
 )
@@ -152,6 +157,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     
     # set group_size for GRPO
     if args_cli.algorithm == "GRPO":
+        agent_cfg["agent"]["select_policy"] = args_cli.select_policy
         agent_cfg["trainer"]["group_size"] = args_cli.group_size
 
     # specify directory for logging experiments

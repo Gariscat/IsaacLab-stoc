@@ -23,7 +23,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import sample_uniform
 
 from math import ceil
-
+from typing import List
 
 @configclass
 class FrankaCabinetEnvCfg(DirectRLEnvCfg):
@@ -350,7 +350,7 @@ class FrankaCabinetEnv(DirectRLEnv):
         # Need to refresh the intermediate values so that _get_observations() can use the latest values
         self._compute_intermediate_values(env_ids)
         
-    def sync_state(self, group_size: int = None):
+    def sync_state(self, group_size: int = None, source_env_ids: List[int] = None):
         ### FOR GRPO ROLLOUTS ###
         # clone the state of source_env_id all other envs
         if group_size is None:
@@ -362,7 +362,8 @@ class FrankaCabinetEnv(DirectRLEnv):
             ed = min(self.num_envs, (i + 1) * group_size)
             cur_slice = torch.arange(st, ed).to(self.device)
             
-            source_env_id = torch.randint(st, ed, (1,)).item()
+            source_env_id = source_env_ids[i]
+            assert st <= source_env_id < ed
                 
             # get the source state
             source_robot_joint_pos = self._robot.data.joint_pos[source_env_id].clone()
