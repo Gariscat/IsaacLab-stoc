@@ -13,7 +13,7 @@ from isaacsim.core.utils.torch.rotations import compute_heading_and_up, compute_
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv, DirectRLEnvCfg
-
+from math import ceil
 
 def normalize_angle(x):
     return torch.atan2(torch.sin(x), torch.cos(x))
@@ -154,12 +154,15 @@ class LocomotionEnv(DirectRLEnv):
             env_ids = self.robot._ALL_INDICES
         self.robot.reset(env_ids)
         super()._reset_idx(env_ids)
-
+        ## print(dir(self.robot.data))
         joint_pos = self.robot.data.default_joint_pos[env_ids]
         joint_vel = self.robot.data.default_joint_vel[env_ids]
         default_root_state = self.robot.data.default_root_state[env_ids]
         default_root_state[:, :3] += self.scene.env_origins[env_ids]
-
+        ## print(default_root_state.shape)
+        ## print(env_ids)
+        ## print(self.robot.data.root_state_w[env_ids, :3])
+        ## print(self.scene.env_origins[env_ids])
         self.robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
         self.robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self.robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
@@ -168,6 +171,51 @@ class LocomotionEnv(DirectRLEnv):
         to_target[:, 2] = 0.0
         self.potentials[env_ids] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
 
+        self._compute_intermediate_values()
+        
+    def sync_state(self, group_size: int = None, source_env_ids: List[int] = None):
+        ### FOR GRPO ROLLOUTS ###
+        # clone the state of source_env_id all other envs
+        # from source/isaaclab_tasks/isaaclab_tasks/direct/franka_cabinet/franka_cabinet_env.py
+        
+        if group_size is None:
+            group_size = self.num_envs
+        
+        num_slices = int(ceil(self.num_envs/group_size))
+        for i in range(num_slices):
+            st = i * group_size
+            ed = min(self.num_envs, (i + 1) * group_size)
+            cur_slice = torch.arange(st, ed).to(self.device)
+            
+            source_env_id = source_env_ids[i]
+            assert st <= source_env_id < ed
+                
+            # get the source joint state
+            source_robot_joint_pos = self.robot.data.joint_pos[source_env_id].clone()
+            source_robot_joint_vel = self.robot.data.joint_vel[source_env_id].clone()
+
+            # set joint states for all envs in the slice
+            self.robot.write_joint_state_to_sim(
+                position=source_robot_joint_pos,
+                velocity=source_robot_joint_vel,
+                env_ids=cur_slice
+            )
+            
+            # get the source root state
+            source_root_state = self.robot.data.root_state_w[source_env_id:source_env_id+1]
+            source_root_state[:, :3] -= self.scene.env_origins[source_env_id]
+            
+            # set root states for all envs in the slice
+            target_root_state = torch.cat([source_root_state for _ in range(ed-st)], dim=0)
+            target_root_state[:, :3] += self.scene.env_origins[cur_slice]
+            
+            self.robot.write_root_pose_to_sim(target_root_state[:, :7], cur_slice)
+            self.robot.write_root_velocity_to_sim(target_root_state[:, 7:], cur_slice)
+            
+            to_target = self.targets[cur_slice] - target_root_state[:, :3]
+            to_target[:, 2] = 0.0
+            self.potentials[cur_slice] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
+            
         self._compute_intermediate_values()
 
 

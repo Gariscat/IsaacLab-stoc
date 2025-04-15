@@ -39,8 +39,8 @@ memory:
 # PPO agent configuration (field names are from PPO_DEFAULT_CONFIG)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html
 agent:
-  class: PPO
-  rollouts: 16
+  class: GRPO
+  rollouts: 128
   learning_epochs: 4
   mini_batches: 2
   discount_factor: 0.99
@@ -73,12 +73,14 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-ant-ppo"
+      project: "isaac-lab-ant-grpo"
+
+  select_policy: "advantageous"  # random / advantageous
 
 
-# Sequential trainer
-# https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
+
 trainer:
-  class: SequentialTrainer
+  class: GRPOTrainer
   timesteps: 8000
   environment_info: log
+  group_size: 128

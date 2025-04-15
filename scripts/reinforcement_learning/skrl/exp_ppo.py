@@ -3,7 +3,7 @@ import subprocess
 
 
 if __name__ == "__main__":
-    seeds = list(range(0, 32))
+    seeds = list(range(0, 1))
     
     for seed in seeds:
         
@@ -11,8 +11,8 @@ if __name__ == "__main__":
             "python",
                 "scripts/reinforcement_learning/skrl/train.py",
                 "--seed", str(seed),
-                "--task", "Isaac-Franka-Cabinet-Direct-v0",
-                "--algorithm", "PPO",
+                "--task", "Isaac-Ant-Direct-v0",
+                "--algorithm", "GRPO",
                 "--headless",
             ]
         command = ' '.join(command_components)
