@@ -74,7 +74,7 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-cabinet-grpo-grouped"
+      project: "isaac-lab-cabinet-grpo-large-grid"
 
   select_policy: "advantageous"  # random / advantageous
 

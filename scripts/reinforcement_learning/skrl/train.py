@@ -213,6 +213,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         wandb.log({"seed": args_cli.seed})
         if args_cli.algorithm == "GRPO":
             wandb.log({"group_size": args_cli.group_size})
+            wandb.log({"select_policy": args_cli.select_policy})
     # load checkpoint (if specified)
     if resume_path:
         print(f"[INFO] Loading model checkpoint from: {resume_path}")
