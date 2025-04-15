@@ -3,7 +3,7 @@ import subprocess
 
 
 if __name__ == "__main__":
-    seeds = list(range(0, 1))
+    seeds = list(range(0, 4))
     
     for seed in seeds:
         
