@@ -38,3 +38,14 @@ gym.register(
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_stochastic_env_cfg.yaml",
     },
 )
+
+gym.register(
+    id="Isaac-Franka-Cabinet-SR-v0",
+    entry_point=f"{__name__}.franka_cabinet_sparse_reward_env:FrankaCabinetSREnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.franka_cabinet_sparse_reward_env:FrankaCabinetSREnvCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+        "skrl_grpo_cfg_entry_point": f"{agents.__name__}:skrl_grpo_cfg.yaml"
+    },
+)

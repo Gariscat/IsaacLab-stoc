@@ -22,26 +22,11 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import sample_uniform
 
-SHOE_CABINET_DIR = "/ssd/lixinyu/articulated/shoecabinet"
-CABINET_PATH = "cdd537b7c30ef1e200f80aaec0534891/instance_dynamic_instanceable.usd"
-
-DIRECTION2ID = {
-    "buttom-right": 480,
-    "mid-right": 440,
-    "top-right": 400,
-    "bottom-left": 360,
-    "mid-left": 320,
-    "top-left": 280,
-}
-
-import random
-import time
-
-# Set the seed to a high-resolution timestamp
-random.seed(int(time.perf_counter() * 1000000))
+from math import ceil
+from typing import List
 
 @configclass
-class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
+class FrankaCabinetSREnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 8.3333  # 500 timesteps
     decimation = 2
@@ -63,7 +48,7 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=64.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=3.0, replicate_physics=True)
 
     # robot
     robot = ArticulationCfg(
@@ -118,34 +103,38 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
         },
     )
 
-    target_direction = random.choice(list(DIRECTION2ID.keys()))
     # cabinet
     cabinet = ArticulationCfg(
         prim_path="/World/envs/env_.*/Cabinet",
         spawn=sim_utils.UsdFileCfg(
-            ### usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Sektion_Cabinet/sektion_cabinet_instanceable.usd",
-            usd_path=f"{SHOE_CABINET_DIR}/{CABINET_PATH}",
+            # usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Sektion_Cabinet/sektion_cabinet_instanceable.usd",
+            usd_path="/home/lixinyu/Desktop/IsaacLab-Cabinet.usd",
             activate_contact_sensors=False,
         ),
         init_state=ArticulationCfg.InitialStateCfg(
-            pos=(0.0, 0, 50.0),
-            rot=(0.0, 0.0, 0.0, 1.0),  # 180 degree around the z-axis
+            pos=(0.0, 0, 0.4),
+            rot=(0.1, 0.0, 0.0, 0.0),
             joint_pos={
-                "Constraint_480": 0.0,
-                "Constraint_440": 0.0,
-                "Constraint_400": 0.0,
-                "Constraint_360": 0.0,
-                "Constraint_320": 0.0,
-                "Constraint_280": 0.0,
+                "door_left_joint": 0.0,
+                "door_right_joint": 0.0,
+                "drawer_bottom_joint": 0.0,
+                "drawer_top_joint": 0.0,
             },
         ),
         actuators={
             "drawers": ImplicitActuatorCfg(
-                joint_names_expr=["Constraint_480", "Constraint_440", "Constraint_400", "Constraint_360", "Constraint_320", "Constraint_280"],
+                joint_names_expr=["drawer_top_joint", "drawer_bottom_joint"],
                 effort_limit=87.0,
                 velocity_limit=100.0,
                 stiffness=10.0,
                 damping=1.0,
+            ),
+            "doors": ImplicitActuatorCfg(
+                joint_names_expr=["door_left_joint", "door_right_joint"],
+                effort_limit=87.0,
+                velocity_limit=100.0,
+                stiffness=10.0,
+                damping=2.5,
             ),
         },
     )
@@ -175,7 +164,7 @@ class FrankaCabinetStochasticEnvCfg(DirectRLEnvCfg):
     finger_reward_scale = 2.0
 
 
-class FrankaCabinetStochasticEnv(DirectRLEnv):
+class FrankaCabinetSREnv(DirectRLEnv):
     # pre-physics step calls
     #   |-- _pre_physics_step(action)
     #   |-- _apply_action()
@@ -185,9 +174,9 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
     #   |-- _reset_idx(env_ids)
     #   |-- _get_observations()
 
-    cfg: FrankaCabinetStochasticEnvCfg
+    cfg: FrankaCabinetSREnvCfg
 
-    def __init__(self, cfg: FrankaCabinetOursEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: FrankaCabinetSREnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
 
         def get_env_local_pose(env_pos: torch.Tensor, xformable: UsdGeom.Xformable, device: torch.device):
@@ -267,7 +256,7 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
         self.hand_link_idx = self._robot.find_bodies("panda_link7")[0][0]
         self.left_finger_link_idx = self._robot.find_bodies("panda_leftfinger")[0][0]
         self.right_finger_link_idx = self._robot.find_bodies("panda_rightfinger")[0][0]
-        self.drawer_link_idx = self._cabinet.find_bodies(f"Constraint_{DIRECTION2ID[self.cfg.target_direction]}")[0][0]
+        self.drawer_link_idx = self._cabinet.find_bodies("drawer_top")[0][0]
 
         self.robot_grasp_rot = torch.zeros((self.num_envs, 4), device=self.device)
         self.robot_grasp_pos = torch.zeros((self.num_envs, 3), device=self.device)
@@ -304,7 +293,7 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
     # post-physics step calls
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        terminated = self._cabinet.data.joint_pos[:, 3] > 0.39  #TODO: change the termination condition
+        terminated = self._cabinet.data.joint_pos[:, 3] > 0.39
         truncated = self.episode_length_buf >= self.max_episode_length - 1
         return terminated, truncated
 
@@ -338,6 +327,10 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
+        ## print(dir(self._robot.data))
+        ## print(self._robot.data.joint_pos)
+        ## print(self._robot.data.joint_pos_target)
+        ## print(vars(self._robot.data))
         # robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids] + sample_uniform(
             -0.125,
@@ -356,6 +349,43 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
 
         # Need to refresh the intermediate values so that _get_observations() can use the latest values
         self._compute_intermediate_values(env_ids)
+        
+    def sync_state(self, group_size: int = None, source_env_ids: List[int] = None):
+        ### FOR GRPO ROLLOUTS ###
+        # clone the state of source_env_id all other envs
+        if group_size is None:
+            group_size = self.num_envs
+        
+        num_slices = int(ceil(self.num_envs/group_size))
+        for i in range(num_slices):
+            st = i * group_size
+            ed = min(self.num_envs, (i + 1) * group_size)
+            cur_slice = torch.arange(st, ed).to(self.device)
+            
+            source_env_id = source_env_ids[i]
+            assert st <= source_env_id < ed
+                
+            # get the source state
+            source_robot_joint_pos = self._robot.data.joint_pos[source_env_id].clone()
+            source_robot_joint_vel = self._robot.data.joint_vel[source_env_id].clone()
+            
+            source_cabinet_joint_pos = self._cabinet.data.joint_pos[source_env_id].clone()
+            source_cabinet_joint_vel = self._cabinet.data.joint_vel[source_env_id].clone()
+
+            # set states for all envs
+            self._robot.write_joint_state_to_sim(
+                position=source_robot_joint_pos,
+                velocity=source_robot_joint_vel,
+                env_ids=cur_slice
+            )
+            self._cabinet.write_joint_state_to_sim(
+                position=source_cabinet_joint_pos,
+                velocity=source_cabinet_joint_vel,
+                env_ids=cur_slice
+            )
+            
+            self._compute_intermediate_values(cur_slice)
+            
 
     def _get_observations(self) -> dict:
         dof_pos_scaled = (
@@ -371,11 +401,13 @@ class FrankaCabinetStochasticEnv(DirectRLEnv):
                 dof_pos_scaled,
                 self._robot.data.joint_vel * self.cfg.dof_velocity_scale,
                 to_target,
-                self._cabinet.data.joint_pos[:, 3].unsqueeze(-1),  #TODO: change the observation
-                self._cabinet.data.joint_vel[:, 3].unsqueeze(-1),  #TODO: change the observation
+                self._cabinet.data.joint_pos[:, 3].unsqueeze(-1),
+                self._cabinet.data.joint_vel[:, 3].unsqueeze(-1),
             ),
             dim=-1,
         )
+        ## print("shape:", self._cabinet.data.joint_pos.shape)
+        ## (4096, 4)
         return {"policy": torch.clamp(obs, -5.0, 5.0)}
 
     # auxiliary methods
