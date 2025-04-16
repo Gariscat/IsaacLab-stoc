@@ -11,8 +11,8 @@ if __name__ == "__main__":
             "python",
                 "scripts/reinforcement_learning/skrl/train.py",
                 "--seed", str(seed),
-                "--task", "Isaac-Ant-Direct-v0",
-                "--algorithm", "GRPO",
+                "--task", "Isaac-Franka-Cabinet-SR-v0",
+                "--algorithm", "PPO",
                 "--headless",
             ]
         command = ' '.join(command_components)

@@ -47,7 +47,12 @@ parser.add_argument(
 parser.add_argument(
     "--group_size",
     type=int,
-    default=64,
+    default=32,
+)
+parser.add_argument(
+    "--rollouts",
+    type=int,
+    default=32,
 )
 parser.add_argument(
     "--select_policy",
@@ -159,6 +164,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     if args_cli.algorithm == "GRPO":
         agent_cfg["agent"]["select_policy"] = args_cli.select_policy
         agent_cfg["trainer"]["group_size"] = args_cli.group_size
+        agent_cfg["agent"]["rollouts"] = args_cli.rollouts
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "skrl", agent_cfg["agent"]["experiment"]["directory"])

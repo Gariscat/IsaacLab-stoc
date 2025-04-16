@@ -500,7 +500,7 @@ class FrankaCabinetSREnv(DirectRLEnv):
         )
 
         self.extras["log"] = {
-            "dist_reward": (dist_reward_scale * dist_reward).mean(),
+            ## "dist_reward": (dist_reward_scale * dist_reward).mean(),
             "rot_reward": (rot_reward_scale * rot_reward).mean(),
             "open_reward": (open_reward_scale * open_reward).mean(),
             "action_penalty": (-action_penalty_scale * action_penalty).mean(),

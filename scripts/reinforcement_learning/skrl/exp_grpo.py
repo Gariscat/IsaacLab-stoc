@@ -1,4 +1,4 @@
-import multiprocessing
+'''import multiprocessing
 import itertools
 import subprocess
 from argparse import ArgumentParser
@@ -37,4 +37,27 @@ if __name__ == "__main__":
     print(f"Using {num_processes} processes")
     
     with multiprocessing.Pool(processes=num_processes) as pool:
-        pool.map(run_training, param_grid)
+        pool.map(run_training, param_grid)'''
+        
+from itertools import product
+import subprocess
+
+
+if __name__ == "__main__":
+    seeds = list(range(0, 4))
+    
+    for seed in seeds:
+        for rollouts in (16, 32, 64):
+            for group_size in (8, 32, 128):
+        
+                command_components = [
+                    "python",
+                        "scripts/reinforcement_learning/skrl/train.py",
+                        "--seed", str(seed),
+                        "--task", "Isaac-Franka-Cabinet-SR-v0",
+                        "--algorithm", "GRPO",
+                        "--headless",
+                    ]
+                command = ' '.join(command_components)
+                print(f"Running command: {command}")
+                subprocess.call(command, shell=True)
