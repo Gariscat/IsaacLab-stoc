@@ -171,7 +171,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
     # specify directory for logging runs: {time-stamp}_{run_name}
-    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + f"_{algorithm}_{args_cli.ml_framework}"
+    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + f"_{algorithm.upper()}"
     print(f"Exact experiment name requested from command line {log_dir}")
     if agent_cfg["agent"]["experiment"]["experiment_name"]:
         log_dir += f'_{agent_cfg["agent"]["experiment"]["experiment_name"]}'
@@ -218,7 +218,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     if wandb.run is not None:
         wandb.log({"seed": args_cli.seed})
         if args_cli.algorithm == "GRPO":
-            wandb.log({"group_size": args_cli.group_size})
             wandb.log({"select_policy": args_cli.select_policy})
     # load checkpoint (if specified)
     if resume_path:

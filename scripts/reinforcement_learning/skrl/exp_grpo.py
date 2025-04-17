@@ -56,6 +56,8 @@ if __name__ == "__main__":
                         "--seed", str(seed),
                         "--task", "Isaac-Franka-Cabinet-SR-v0",
                         "--algorithm", "GRPO",
+                        "--rollouts", str(rollouts),
+                        "--group_size", str(group_size),
                         "--headless",
                     ]
                 command = ' '.join(command_components)
