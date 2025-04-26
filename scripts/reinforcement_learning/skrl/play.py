@@ -46,7 +46,7 @@ parser.add_argument(
     help="The RL algorithm used for training the skrl agent.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
-
+parser.add_argument("--debug", action="store_true", default=False, help="Disable wandb.")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -95,7 +95,10 @@ from isaaclab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, pa
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
-
+agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
+if args_cli.debug:
+    import os
+    os.environ["WANDB_MODE"] = "disabled"
 
 def main():
     """Play with skrl agent."""
@@ -111,6 +114,9 @@ def main():
         experiment_cfg = load_cfg_from_registry(args_cli.task, f"skrl_{algorithm}_cfg_entry_point")
     except ValueError:
         experiment_cfg = load_cfg_from_registry(args_cli.task, "skrl_cfg_entry_point")
+    
+    print("MODEL INFO:")
+    print(experiment_cfg["models"])
 
     # specify directory for logging experiments (load checkpoint)
     log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])

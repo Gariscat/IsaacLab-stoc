@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import torch
-
+import torch.nn.functional as F
 from isaacsim.core.utils.stage import get_current_stage
 from isaacsim.core.utils.torch.transformations import tf_combine, tf_inverse, tf_vector
 from pxr import UsdGeom
@@ -482,8 +482,8 @@ class FrankaCabinetSREnv(DirectRLEnv):
         action_penalty = torch.sum(actions**2, dim=-1)
 
         # how far the cabinet has been opened out
-        open_reward = cabinet_dof_pos[:, 3]  # drawer_top_joint
-
+        #### open_reward = cabinet_dof_pos[:, 3]  # drawer_top_joint
+        open_reward = F.leaky_relu(cabinet_dof_pos[:, 3] - 0.2)    
         # penalty for distance of each finger from the drawer handle
         lfinger_dist = franka_lfinger_pos[:, 2] - drawer_grasp_pos[:, 2]
         rfinger_dist = drawer_grasp_pos[:, 2] - franka_rfinger_pos[:, 2]
@@ -501,12 +501,13 @@ class FrankaCabinetSREnv(DirectRLEnv):
 
         self.extras["log"] = {
             ## "dist_reward": (dist_reward_scale * dist_reward).mean(),
-            "rot_reward": (rot_reward_scale * rot_reward).mean(),
+            ## "rot_reward": (rot_reward_scale * rot_reward).mean(),
             "open_reward": (open_reward_scale * open_reward).mean(),
             "action_penalty": (-action_penalty_scale * action_penalty).mean(),
             "left_finger_distance_reward": (finger_reward_scale * lfinger_dist).mean(),
             "right_finger_distance_reward": (finger_reward_scale * rfinger_dist).mean(),
             "finger_dist_penalty": (finger_reward_scale * finger_dist_penalty).mean(),
+            "success_rate": (cabinet_dof_pos[:, 3] > 0.2).float().mean()
         }
 
         # bonus for opening drawer properly

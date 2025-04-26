@@ -11,6 +11,9 @@ a more user-friendly way.
 """
 
 """Launch Isaac Sim Simulator first."""
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 import argparse
 import sys

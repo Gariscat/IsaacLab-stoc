@@ -1,6 +1,7 @@
 from itertools import product
 import subprocess
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 if __name__ == "__main__":
     seeds = list(range(0, 4))

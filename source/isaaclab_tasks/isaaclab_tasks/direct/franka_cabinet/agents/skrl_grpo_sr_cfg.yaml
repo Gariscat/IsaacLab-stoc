@@ -73,7 +73,7 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-cabinet-sr-grpo"
+      project: "isaac-lab-cabinet-sr-grpo-test-reward"
 
   select_policy: "advantageous"  # random / advantageous
 
