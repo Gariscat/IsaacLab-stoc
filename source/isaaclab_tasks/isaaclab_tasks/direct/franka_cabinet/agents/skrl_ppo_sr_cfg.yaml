@@ -73,7 +73,7 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-cabinet-sr-ppo-test-reward"
+      project: "isaac-lab-cabinet-sparse-reward"
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html

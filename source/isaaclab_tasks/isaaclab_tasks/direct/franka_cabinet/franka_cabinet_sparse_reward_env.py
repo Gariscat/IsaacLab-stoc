@@ -161,7 +161,8 @@ class FrankaCabinetSREnvCfg(DirectRLEnvCfg):
     rot_reward_scale = 1.5
     open_reward_scale = 10.0
     action_penalty_scale = 0.05
-    finger_reward_scale = 2.0
+    ## finger_reward_scale = 2.0
+    finger_reward_scale = 0
 
 
 class FrankaCabinetSREnv(DirectRLEnv):

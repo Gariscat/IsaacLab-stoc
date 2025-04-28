@@ -41,16 +41,18 @@ if __name__ == "__main__":
         
 from itertools import product
 import subprocess
-
+import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 if __name__ == "__main__":
-    seeds = list(range(0, 4))
+    x = 2025
+    seeds = list(range(x, x+3))
     
     for seed in seeds:
         # for rollouts in (16, 32, 64):
         #     for group_size in (8, 32, 128):
-        for rollouts in (16, 64,):
-            for group_size in (32, 128,):
+        for rollouts in (64, 128,):
+            for group_size in (128, 256, 512,):
                 command_components = [
                     "python",
                         "scripts/reinforcement_learning/skrl/train.py",

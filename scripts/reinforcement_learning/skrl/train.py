@@ -119,6 +119,8 @@ from isaaclab_rl.skrl import SkrlVecEnvWrapper
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 import wandb
+
+os.environ["WANDB_MODE"] = "online"
 # PLACEHOLDER: Extension template (do not remove this comment)
 if args_cli.debug:
     import os
