@@ -45,24 +45,23 @@ import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 if __name__ == "__main__":
-    x = 2025
-    seeds = list(range(x, x+3))
+    x = 2024
+    seeds = list(range(x, x+2))
     
-    for seed in seeds:
-        # for rollouts in (16, 32, 64):
-        #     for group_size in (8, 32, 128):
-        for rollouts in (64, 128,):
-            for group_size in (128, 256, 512,):
-                command_components = [
-                    "python",
-                        "scripts/reinforcement_learning/skrl/train.py",
-                        "--seed", str(seed),
-                        "--task", "Isaac-Franka-Cabinet-SR-v0",
-                        "--algorithm", "GRPO",
-                        "--rollouts", str(rollouts),
-                        "--group_size", str(group_size),
-                        "--headless",
-                    ]
-                command = ' '.join(command_components)
-                print(f"Running command: {command}")
-                subprocess.call(command, shell=True)
+    rollouts_s = (128, 256)
+    discount_factors = (0.9, 0.99, 0.999, 0.9999)
+    
+    for seed, rollouts, discount_factor in product(seeds, rollouts_s, discount_factors):
+        command_components = [
+            "python",
+                "scripts/reinforcement_learning/skrl/train.py",
+                "--seed", str(seed),
+                "--task", "Isaac-Franka-Cabinet-SR-v0",
+                "--algorithm", "GRPO",
+                "--rollouts", str(rollouts),
+                "--discount_factor", str(discount_factor),
+                "--headless",
+            ]
+        command = ' '.join(command_components)
+        print(f"Running command: {command}")
+        subprocess.call(command, shell=True)

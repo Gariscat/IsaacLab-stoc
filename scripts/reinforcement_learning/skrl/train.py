@@ -55,6 +55,11 @@ parser.add_argument(
     default=32,
 )
 parser.add_argument(
+    "--discount_factor",
+    type=float,
+    default=0.999,
+)
+parser.add_argument(
     "--select_policy",
     type=str,
     default="advantageous",
@@ -169,6 +174,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         agent_cfg["agent"]["select_policy"] = args_cli.select_policy
         agent_cfg["trainer"]["group_size"] = args_cli.group_size
         agent_cfg["agent"]["rollouts"] = args_cli.rollouts
+        agent_cfg["agent"]["discount_factor"] = args_cli.discount_factor
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "skrl", agent_cfg["agent"]["experiment"]["directory"])
