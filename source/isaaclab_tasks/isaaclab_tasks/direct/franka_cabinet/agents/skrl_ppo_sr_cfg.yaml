@@ -73,11 +73,12 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-cabinet-sparse-reward"
+      project: "isaac-lab-cabinet-sr-final"
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 24000
+  # timesteps: 24000
+  timesteps: 120000
   environment_info: log

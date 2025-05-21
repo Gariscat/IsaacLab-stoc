@@ -1157,6 +1157,7 @@ class Articulation(AssetBase):
         root_prims = sim_utils.get_all_matching_child_prims(
             template_prim_path, predicate=lambda prim: prim.HasAPI(UsdPhysics.ArticulationRootAPI)
         )
+        ## print("ROOT PRIMS", root_prims) # checked
         if len(root_prims) == 0:
             raise RuntimeError(
                 f"Failed to find an articulation when resolving '{self.cfg.prim_path}'."
@@ -1168,7 +1169,7 @@ class Articulation(AssetBase):
                 f" Found multiple '{root_prims}' under '{template_prim_path}'."
                 " Please ensure that there is only one articulation in the prim path tree."
             )
-
+        ## print("Articulation joint names before root physx view:", self.joint_names) # not defined here
         # resolve articulation root prim back into regex expression
         root_prim_path = root_prims[0].GetPath().pathString
         root_prim_path_expr = self.cfg.prim_path + root_prim_path[len(template_prim_path) :]
@@ -1187,7 +1188,17 @@ class Articulation(AssetBase):
         omni.log.info(f"Number of joints: {self.num_joints}")
         omni.log.info(f"Joint names: {self.joint_names}")
         omni.log.info(f"Number of fixed tendons: {self.num_fixed_tendons}")
-
+        '''print("****************")
+        print("Config:", self.cfg)
+        print("Backend:", self._backend)
+        print("Root PhysX View:", self._root_physx_view)
+        print("  Num Instances", self._root_physx_view.count)
+        print("  Shared Metatype:", self._root_physx_view.shared_metatype)
+        print("    Num Joints:", self._root_physx_view.shared_metatype.dof_count)
+        print("Root Prim Path:", root_prim_path)
+        print("Root Prim Path Expr:", root_prim_path_expr)
+        print("Articulation joint names:", self.joint_names)
+        print("****************")'''
         # container for data access
         self._data = ArticulationData(self.root_physx_view, self.device)
 

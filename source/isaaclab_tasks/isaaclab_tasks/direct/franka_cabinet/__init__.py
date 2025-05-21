@@ -49,3 +49,14 @@ gym.register(
         "skrl_grpo_cfg_entry_point": f"{agents.__name__}:skrl_grpo_sr_cfg.yaml"
     },
 )
+
+gym.register(
+    id="Isaac-Franka-Cabinet-Multi-Cab-v0",
+    entry_point=f"{__name__}.franka_cabinet_multi_cab_env:FrankaCabinetMultiCabEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.franka_cabinet_multi_cab_env:FrankaCabinetMultiCabEnvCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_mc_cfg.yaml",
+        "skrl_grpo_cfg_entry_point": f"{agents.__name__}:skrl_grpo_mc_cfg.yaml"
+    },
+)

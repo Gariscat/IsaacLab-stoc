@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import torch
-
+import torch.nn.functional as F
 from isaacsim.core.utils.stage import get_current_stage
 from isaacsim.core.utils.torch.transformations import tf_combine, tf_inverse, tf_vector
 from pxr import UsdGeom
@@ -26,7 +26,7 @@ from math import ceil
 from typing import List
 
 @configclass
-class FrankaCabinetEnvCfg(DirectRLEnvCfg):
+class FrankaCabinetMultiCabEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 8.3333  # 500 timesteps
     decimation = 2
@@ -108,33 +108,25 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Cabinet",
         spawn=sim_utils.UsdFileCfg(
             # usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Sektion_Cabinet/sektion_cabinet_instanceable.usd",
-            usd_path="/home/lixinyu/Desktop/IsaacLab-Cabinet.usd",
+            usd_path="/home/lixinyu/Desktop/USDFiles/Cabinet_x1.usd",
             activate_contact_sensors=False,
         ),
         init_state=ArticulationCfg.InitialStateCfg(
-            pos=(0.0, 0, 0.4),
-            rot=(0.1, 0.0, 0.0, 0.0),
+            pos=(0.1, 0, 0.4),
+            # rot=(0.5, 0.5, 0.5, 0.5), # first around x-axis +90 degrees, then around z-axis +90 degrees
+            rot=(0.7071,0,0,0.7071), # around z-axis for +90 degrees
             joint_pos={
-                "door_left_joint": 0.0,
-                "door_right_joint": 0.0,
-                "drawer_bottom_joint": 0.0,
-                "drawer_top_joint": 0.0,
+                ## "Constraint_100": 0.0,
+                "Constraint_100": -0.3,
             },
         ),
         actuators={
             "drawers": ImplicitActuatorCfg(
-                joint_names_expr=["drawer_top_joint", "drawer_bottom_joint"],
+                joint_names_expr=["Constraint_100", ],
                 effort_limit=87.0,
                 velocity_limit=100.0,
                 stiffness=10.0,
                 damping=1.0,
-            ),
-            "doors": ImplicitActuatorCfg(
-                joint_names_expr=["door_left_joint", "door_right_joint"],
-                effort_limit=87.0,
-                velocity_limit=100.0,
-                stiffness=10.0,
-                damping=2.5,
             ),
         },
     )
@@ -157,14 +149,17 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     dof_velocity_scale = 0.1
 
     # reward scales
-    dist_reward_scale = 1.5
+    ## dist_reward_scale = 1.5
+    dist_reward_scale = 5.
     rot_reward_scale = 1.5
-    open_reward_scale = 10.0
+    # open_reward_scale = 10.0
+    open_reward_scale = 50.
+    ## open_reward_scale = 100.
     action_penalty_scale = 0.05
     finger_reward_scale = 2.0
 
 
-class FrankaCabinetEnv(DirectRLEnv):
+class FrankaCabinetMultiCabEnv(DirectRLEnv):
     # pre-physics step calls
     #   |-- _pre_physics_step(action)
     #   |-- _apply_action()
@@ -174,9 +169,9 @@ class FrankaCabinetEnv(DirectRLEnv):
     #   |-- _reset_idx(env_ids)
     #   |-- _get_observations()
 
-    cfg: FrankaCabinetEnvCfg
+    cfg: FrankaCabinetMultiCabEnvCfg
 
-    def __init__(self, cfg: FrankaCabinetEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: FrankaCabinetMultiCabEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
 
         def get_env_local_pose(env_pos: torch.Tensor, xformable: UsdGeom.Xformable, device: torch.device):
@@ -256,12 +251,17 @@ class FrankaCabinetEnv(DirectRLEnv):
         self.hand_link_idx = self._robot.find_bodies("panda_link7")[0][0]
         self.left_finger_link_idx = self._robot.find_bodies("panda_leftfinger")[0][0]
         self.right_finger_link_idx = self._robot.find_bodies("panda_rightfinger")[0][0]
-        self.drawer_link_idx = self._cabinet.find_bodies("drawer_top")[0][0]
+        ## self.drawer_link_idx = self._cabinet.find_bodies("Group_100")[0][0]
+        self.drawer_link_idx = self._cabinet.find_bodies("Group_100")[0][0]
+        '''print(type(self._cabinet))
+        print(type(self._cabinet.data))
+        print(dir(self._cabinet.data))'''
 
         self.robot_grasp_rot = torch.zeros((self.num_envs, 4), device=self.device)
         self.robot_grasp_pos = torch.zeros((self.num_envs, 3), device=self.device)
         self.drawer_grasp_rot = torch.zeros((self.num_envs, 4), device=self.device)
         self.drawer_grasp_pos = torch.zeros((self.num_envs, 3), device=self.device)
+        self.orig_cabinet_pos = torch.clone(self._cabinet.data.joint_pos)
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -293,7 +293,7 @@ class FrankaCabinetEnv(DirectRLEnv):
     # post-physics step calls
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        terminated = self._cabinet.data.joint_pos[:, 3] > 0.39
+        terminated = self._get_cabinet_delta() > 0.39
         truncated = self.episode_length_buf >= self.max_episode_length - 1
         return terminated, truncated
 
@@ -401,8 +401,8 @@ class FrankaCabinetEnv(DirectRLEnv):
                 dof_pos_scaled,
                 self._robot.data.joint_vel * self.cfg.dof_velocity_scale,
                 to_target,
-                self._cabinet.data.joint_pos[:, 3].unsqueeze(-1),
-                self._cabinet.data.joint_vel[:, 3].unsqueeze(-1),
+                self._get_cabinet_delta().unsqueeze(-1),
+                self._cabinet.data.joint_vel[:, -1].unsqueeze(-1),
             ),
             dim=-1,
         )
@@ -411,6 +411,9 @@ class FrankaCabinetEnv(DirectRLEnv):
         return {"policy": torch.clamp(obs, -5.0, 5.0)}
 
     # auxiliary methods
+    
+    def _get_cabinet_delta(self) -> torch.Tensor:
+        return self.orig_cabinet_pos[:, -1] - self._cabinet.data.joint_pos[:, -1] 
 
     def _compute_intermediate_values(self, env_ids: torch.Tensor | None = None):
         if env_ids is None:
@@ -482,9 +485,12 @@ class FrankaCabinetEnv(DirectRLEnv):
         action_penalty = torch.sum(actions**2, dim=-1)
 
         # how far the cabinet has been opened out
-        open_reward = cabinet_dof_pos[:, 3]  # drawer_top_joint
-        """print(self._cabinet.data.joint_pos.shape)
-        print(self._cabinet.data.joint_pos[:, 3].mean())"""
+        # cabinet_dof_pos -= self.orig_cabinet_pos
+        # cabinet_moved_dist = (cabinet_dof_pos[:, -1]-self.orig_cabinet_pos[:, -1]).abs()
+        cabinet_moved_dist = self._get_cabinet_delta()
+        open_reward = self._get_cabinet_delta()  # drawer_top_joint
+        '''print(self._cabinet.data.joint_pos.shape)
+        print(cabinet_moved_dist.mean())'''
 
         # penalty for distance of each finger from the drawer handle
         lfinger_dist = franka_lfinger_pos[:, 2] - drawer_grasp_pos[:, 2]
@@ -509,13 +515,13 @@ class FrankaCabinetEnv(DirectRLEnv):
             "left_finger_distance_reward": (finger_reward_scale * lfinger_dist).mean(),
             "right_finger_distance_reward": (finger_reward_scale * rfinger_dist).mean(),
             "finger_dist_penalty": (finger_reward_scale * finger_dist_penalty).mean(),
-            "success_rate": (cabinet_dof_pos[:, 3] > 0.2).float().mean()
+            "success_rate": (cabinet_moved_dist > 0.2).float().mean()
         }
 
         # bonus for opening drawer properly
-        rewards = torch.where(cabinet_dof_pos[:, 3] > 0.01, rewards + 0.25, rewards)
-        rewards = torch.where(cabinet_dof_pos[:, 3] > 0.2, rewards + 0.25, rewards)
-        rewards = torch.where(cabinet_dof_pos[:, 3] > 0.35, rewards + 0.25, rewards)
+        rewards = torch.where(cabinet_moved_dist > 0.01, rewards + 0.25, rewards)
+        rewards = torch.where(cabinet_moved_dist > 0.2, rewards + 0.25, rewards)
+        rewards = torch.where(cabinet_moved_dist > 0.35, rewards + 0.25, rewards)
 
         return rewards
 

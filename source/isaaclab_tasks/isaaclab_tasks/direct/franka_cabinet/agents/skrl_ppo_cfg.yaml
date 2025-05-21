@@ -73,7 +73,7 @@ agent:
 
     wandb: True
     wandb_kwargs:
-      project: "isaac-lab-cabinet-ppo-comp"
+      project: "isaac-lab-cabinet-ppo"
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html

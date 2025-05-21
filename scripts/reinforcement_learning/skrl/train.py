@@ -65,6 +65,11 @@ parser.add_argument(
     default="advantageous",
 )
 parser.add_argument(
+    "--comment",
+    type=str,
+    default="",
+)
+parser.add_argument(
     "--debug",
     action="store_true"
 )
@@ -181,7 +186,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
     # specify directory for logging runs: {time-stamp}_{run_name}
-    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + f"_{algorithm.upper()}"
+    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + f"_pid{os.getpid()}_{algorithm.upper()}"
     print(f"Exact experiment name requested from command line {log_dir}")
     if agent_cfg["agent"]["experiment"]["experiment_name"]:
         log_dir += f'_{agent_cfg["agent"]["experiment"]["experiment_name"]}'
@@ -202,7 +207,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
-
+    print(env.observation_space, env.action_space)
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
         env = multi_agent_to_single_agent(env)
@@ -229,6 +234,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         wandb.log({"seed": args_cli.seed})
         if args_cli.algorithm == "GRPO":
             wandb.log({"select_policy": args_cli.select_policy})
+        if len(args_cli.comment):
+            wandb.log({"comment": args_cli.comment})
     # load checkpoint (if specified)
     if resume_path:
         print(f"[INFO] Loading model checkpoint from: {resume_path}")
