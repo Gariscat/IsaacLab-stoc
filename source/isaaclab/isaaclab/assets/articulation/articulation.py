@@ -1294,6 +1294,8 @@ class Articulation(AssetBase):
         self._data.default_joint_pos = torch.zeros(self.num_instances, self.num_joints, device=self.device)
         self._data.default_joint_vel = torch.zeros_like(self._data.default_joint_pos)
         # joint pos
+        print("self.cfg.init_state.joint_pos:", self.cfg.init_state.joint_pos)
+        print("self.joint_names:", self.joint_names)
         indices_list, _, values_list = string_utils.resolve_matching_names_values(
             self.cfg.init_state.joint_pos, self.joint_names
         )

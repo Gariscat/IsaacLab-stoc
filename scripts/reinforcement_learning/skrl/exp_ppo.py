@@ -23,7 +23,7 @@ if __name__ == "__main__":
             "python",
                 "scripts/reinforcement_learning/skrl/train.py",
                 "--seed", str(seed),
-                "--task", "Isaac-Franka-Cabinet-SR-v0",
+                "--task", "Isaac-Franka-Cabinet-Direct-v0",
                 "--algorithm", "PPO",
                 "--comment", args.comment,
                 "--headless",

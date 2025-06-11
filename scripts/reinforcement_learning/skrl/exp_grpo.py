@@ -38,10 +38,10 @@ def run_training(params: Dict):
 if __name__ == "__main__":
     x = 0
     seeds = list(range(x, x+2))
-    available_gpus = (1, 2, 3, 4,)
-    rollouts_s = (128, 256)
+    available_gpus = (5, 6)
+    rollouts_s = (32, 128, 512)
     discount_factors = (0.99, 0.999, 0.9999)
-    group_sizes = (8, 32, 128, 512)
+    group_sizes = (32, 128, 512)
     
     exp_params = []
     idx = 0
@@ -67,5 +67,5 @@ if __name__ == "__main__":
         print(f"Running command: {command}")
         subprocess.call(command, shell=True)'''
         
-    with multiprocessing.Pool(processes=4) as pool:
+    with multiprocessing.Pool(processes=2) as pool:
         pool.map(run_training, exp_params)

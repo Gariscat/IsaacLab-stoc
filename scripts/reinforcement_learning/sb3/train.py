@@ -51,7 +51,7 @@ from datetime import datetime
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
-from stable_baselines3.common.logger import configure
+## from stable_baselines3.common.logger import configure
 from stable_baselines3.common.vec_env import VecNormalize
 
 from isaaclab.envs import (
@@ -68,6 +68,10 @@ from isaaclab_rl.sb3 import Sb3VecEnvWrapper, process_sb3_cfg
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
+
+
+import wandb
+from wandb.integration.sb3 import WandbCallback
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
@@ -143,17 +147,28 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         )
 
     # create agent from stable baselines
-    agent = PPO(policy_arch, env, verbose=1, **agent_cfg)
+    run = wandb.init(
+        project="isaaclab-sb3",
+        config=agent_cfg,
+        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+        monitor_gym=True,  # auto-upload the videos of agents playing the game
+        ## save_code=True,  # optional
+    )
+    agent = PPO(policy_arch, env, verbose=1, tensorboard_log=f"tb_logs/{run.id}", **agent_cfg)
     # configure the logger
-    new_logger = configure(log_dir, ["stdout", "tensorboard"])
-    agent.set_logger(new_logger)
+    ## new_logger = configure(log_dir, ["stdout", "tensorboard"])
+    ## agent.set_logger(new_logger)
 
     # callbacks for agent
-    checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=log_dir, name_prefix="model", verbose=2)
+    ## checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=log_dir, name_prefix="ckpt", verbose=2)
+    checkpoint_callback = WandbCallback(
+        model_save_path=f"ckpt/{run.id}",
+        verbose=2,
+    )
     # train the agent
     agent.learn(total_timesteps=n_timesteps, callback=checkpoint_callback)
     # save the final model
-    agent.save(os.path.join(log_dir, "model"))
+    agent.save(os.path.join(log_dir, "ckpt"))
 
     # close the simulator
     env.close()

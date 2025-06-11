@@ -153,7 +153,7 @@ class FrankaCabinetSREnvCfg(DirectRLEnvCfg):
         ),
     )
 
-    action_scale = 7.5
+    '''action_scale = 7.5
     dof_velocity_scale = 0.1
 
     # reward scales
@@ -165,7 +165,16 @@ class FrankaCabinetSREnvCfg(DirectRLEnvCfg):
     open_reward_scale = 10.
     action_penalty_scale = 0.05
     finger_reward_scale = 2.0
-    ## finger_reward_scale = 0
+    ## finger_reward_scale = 0'''
+    action_scale = 7.5
+    dof_velocity_scale = 0.1
+
+    # reward scales
+    dist_reward_scale = 1.5
+    rot_reward_scale = 1.5
+    open_reward_scale = 10.0
+    action_penalty_scale = 0.05
+    finger_reward_scale = 2.0
 
 
 class FrankaCabinetSREnv(DirectRLEnv):

@@ -371,6 +371,7 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         self.extras["log"].update(info)
         # -- rewards manager
         info = self.reward_manager.reset(env_ids)
+        print("Reward Manager Info:", info)
         self.extras["log"].update(info)
         # -- curriculum manager
         info = self.curriculum_manager.reset(env_ids)

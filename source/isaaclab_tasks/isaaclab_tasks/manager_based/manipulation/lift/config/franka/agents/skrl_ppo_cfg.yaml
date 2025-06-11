@@ -71,6 +71,10 @@ agent:
     write_interval: auto
     checkpoint_interval: auto
 
+    wandb: True
+    wandb_kwargs:
+      project: "isaaclab-skrl"
+
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
